@@ -3,15 +3,12 @@ main = "src/index.js"
 compatibility_date = "2024-01-01"
 workers_dev = true
 
-# Account configuration
-# Set your account_id here or via wrangler login
-# account_id = "your-account-id-here"
-
 # Worker configuration
 [build]
 command = "npm install"
 
-# Environment variables (non-sensitive)
+# Environment variables with ZERO-CONFIG defaults
+# All variables have sensible defaults - NO secrets required!
 [vars]
 MAX_TABLE_SIZE = "10000"
 DEFAULT_IMAGE_FORMAT = "png"
@@ -21,14 +18,15 @@ RATE_LIMIT = "60"
 ENABLE_CORS = "true"
 LOG_LEVEL = "info"
 
-# Secrets (set via: wrangler secret put QUICKCHART_API_KEY)
-# QUICKCHART_API_KEY - Your QuickChart.io API key
-# MCP_API_KEY - API key for MCP authentication (optional)
+# Optional secrets (NOT REQUIRED for deployment)
+# To enhance rate limits, optionally set via: wrangler secret put QUICKCHART_API_KEY
+# QUICKCHART_API_KEY - Your QuickChart.io API key (optional, uses free tier without it)
+# MCP_API_KEY - API key for MCP authentication (optional, no auth without it)
 
 # Production environment
 [env.production]
 name = "table-to-image-mcp-prod"
-route = "table-to-image.your-domain.com/*"
+route = { pattern = "table-to-image.your-domain.com/*", zone_name = "your-domain.com" }
 vars = { ENVIRONMENT = "production" }
 
 # Staging environment
@@ -49,47 +47,3 @@ cpu_ms = 50
 [observability]
 enabled = true
 head_sampling_rate = 1
-
-# Compatibility flags
-[compatibility_flags]
-# nodejs_compat = true
-
-# Durable Objects (if needed in future)
-# [[durable_objects.bindings]]
-# name = "TABLE_CACHE"
-# class_name = "TableCache"
-# script_name = "table-to-image-mcp"
-
-# KV Namespaces (for caching)
-# [[kv_namespaces]]
-# binding = "CACHE"
-# id = "your-kv-namespace-id"
-
-# R2 Buckets (for image storage)
-# [[r2_buckets]]
-# binding = "IMAGES"
-# bucket_name = "table-images"
-
-# Analytics Engine
-# [[analytics_engine_datasets]]
-# binding = "ANALYTICS"
-
-# Rate limiting via Durable Objects
-# [[durable_objects.bindings]]
-# name = "RATE_LIMITER"
-# class_name = "RateLimiter"
-
-# Custom domains
-# [[routes]]
-# pattern = "api.your-domain.com/*"
-# zone_name = "your-domain.com"
-
-# Cron triggers (for cleanup jobs)
-# [triggers]
-# crons = ["0 0 * * *"]  # Daily at midnight
-
-# Unsafe bindings (if needed)
-# [unsafe]
-# bindings = [
-#   { type = "plain_text", name = "TEXT", text = "example" }
-# ]
