@@ -1,310 +1,155 @@
 /**
- * Cloudflare Workers Table-to-Image MCP Connector
- * Converts table data to images using QuickChart.io API
- * 
- * @author Clement Venard
- * @license MIT
+ * Simple Table-to-Image MCP Server
+ * Converts tables to images using QuickChart.io (free tier)
  */
 
 import { handleMCPRequest } from './mcp-server.js';
 
-// Configuration
-const CONFIG = {
-  QUICKCHART_BASE_URL: 'https://quickchart.io/chart',
-  MAX_TABLE_SIZE: 10000,
-  DEFAULT_FORMAT: 'png',
-  DEFAULT_WIDTH: 800,
-  DEFAULT_HEIGHT: 600,
-  RATE_LIMIT: 60,
-};
+const QUICKCHART_URL = 'https://quickchart.io/chart';
 
-/**
- * Main Worker entry point
- */
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     try {
-      // Apply environment config
-      const config = applyEnvConfig(env);
-      
-      // CORS headers
-      const corsHeaders = getCorsHeaders(env);
-      
-      // Handle OPTIONS for CORS
-      if (request.method === 'OPTIONS') {
-        return new Response(null, { headers: corsHeaders });
-      }
-      
       const url = new URL(request.url);
       const path = url.pathname;
-      
-      // Route handling
+
       let response;
-      
+
+      // Route requests
       if (path === '/' || path === '/health') {
         response = handleHealth();
       } else if (path === '/convert' && request.method === 'POST') {
-        response = await handleConvert(request, env, config);
+        response = await handleConvert(request, env);
       } else if (path.startsWith('/mcp')) {
-        response = await handleMCPRequest(request, env, config);
+        response = await handleMCPRequest(request, env);
       } else {
-        response = new Response(JSON.stringify({
-          error: 'Not Found',
-          message: 'Available endpoints: /health, /convert, /mcp/*'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        response = jsonResponse({ error: 'Not Found' }, 404);
       }
-      
-      // Add CORS headers to response
+
+      // Add CORS headers
       Object.entries(corsHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
       });
-      
+
       return response;
-      
     } catch (error) {
-      return new Response(JSON.stringify({
-        error: 'Internal Server Error',
-        message: error.message
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ error: error.message }, 500);
     }
   }
 };
 
-/**
- * Apply environment configuration
- */
-function applyEnvConfig(env) {
-  return {
-    ...CONFIG,
-    MAX_TABLE_SIZE: parseInt(env.MAX_TABLE_SIZE || CONFIG.MAX_TABLE_SIZE),
-    DEFAULT_FORMAT: env.DEFAULT_IMAGE_FORMAT || CONFIG.DEFAULT_FORMAT,
-    DEFAULT_WIDTH: parseInt(env.DEFAULT_IMAGE_WIDTH || CONFIG.DEFAULT_WIDTH),
-    DEFAULT_HEIGHT: parseInt(env.DEFAULT_IMAGE_HEIGHT || CONFIG.DEFAULT_HEIGHT),
-    RATE_LIMIT: parseInt(env.RATE_LIMIT || CONFIG.RATE_LIMIT),
-    QUICKCHART_API_KEY: env.QUICKCHART_API_KEY,
-  };
-}
-
-/**
- * Get CORS headers
- */
-function getCorsHeaders(env) {
-  const enableCors = env.ENABLE_CORS !== 'false';
-  
-  if (!enableCors) return {};
-  
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
-}
-
-/**
- * Handle health check
- */
 function handleHealth() {
-  return new Response(JSON.stringify({
+  return jsonResponse({
     status: 'healthy',
-    version: '1.0.0',
     service: 'table-to-image-mcp',
-    timestamp: new Date().toISOString()
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    version: '1.0.0'
   });
 }
 
-/**
- * Handle table-to-image conversion
- */
-async function handleConvert(request, env, config) {
+async function handleConvert(request, env) {
   try {
     const body = await request.json();
-    
-    // Validate input
-    const validation = validateTableData(body, config);
-    if (!validation.valid) {
-      return new Response(JSON.stringify({
-        error: 'Validation Error',
-        message: validation.error
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+    if (!body.table) {
+      return jsonResponse({ error: 'Missing table data' }, 400);
     }
-    
+
     // Normalize table format
-    const normalizedTable = normalizeTableData(body.table);
+    const table = normalizeTable(body.table);
     
-    // Convert to image
-    const imageUrl = await convertTableToImage(
-      normalizedTable,
-      body.format || config.DEFAULT_FORMAT,
-      body.width || config.DEFAULT_WIDTH,
-      body.height || config.DEFAULT_HEIGHT,
-      body.style || 'default',
-      config
-    );
-    
-    return new Response(JSON.stringify({
+    // Convert to image URL
+    const imageUrl = buildQuickChartUrl(table, body, env);
+
+    return jsonResponse({
       success: true,
-      imageUrl: imageUrl,
-      format: body.format || config.DEFAULT_FORMAT,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      imageUrl,
+      format: body.format || 'png'
     });
-    
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Conversion Error',
-      message: error.message
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ error: error.message }, 400);
   }
 }
 
-/**
- * Validate table data
- */
-function validateTableData(body, config) {
-  if (!body.table) {
-    return { valid: false, error: 'Missing table data' };
-  }
-  
-  const table = body.table;
-  
-  // Check table size
-  let cellCount = 0;
-  if (table.headers && table.rows) {
-    cellCount = table.headers.length * (table.rows.length + 1);
-  } else if (Array.isArray(table)) {
-    cellCount = table.reduce((sum, row) => sum + (Array.isArray(row) ? row.length : Object.keys(row).length), 0);
-  }
-  
-  if (cellCount > config.MAX_TABLE_SIZE) {
-    return { valid: false, error: `Table too large (max ${config.MAX_TABLE_SIZE} cells)` };
-  }
-  
-  return { valid: true };
-}
-
-/**
- * Normalize different table formats to standard format
- */
-function normalizeTableData(table) {
-  // Format 1: { headers: [], rows: [[]] }
+function normalizeTable(table) {
+  // Handle { headers: [], rows: [[]] }
   if (table.headers && table.rows) {
     return table;
   }
-  
-  // Format 2: Array of objects
-  if (Array.isArray(table) && table.length > 0 && typeof table[0] === 'object' && !Array.isArray(table[0])) {
+
+  // Handle array of objects
+  if (Array.isArray(table) && table[0] && !Array.isArray(table[0])) {
     const headers = Object.keys(table[0]);
     const rows = table.map(obj => headers.map(h => obj[h]));
     return { headers, rows };
   }
-  
-  // Format 3: 2D array
-  if (Array.isArray(table) && table.length > 0 && Array.isArray(table[0])) {
+
+  // Handle 2D array
+  if (Array.isArray(table) && Array.isArray(table[0])) {
     return {
       headers: table[0],
       rows: table.slice(1)
     };
   }
-  
+
   throw new Error('Unsupported table format');
 }
 
-/**
- * Convert table to image using QuickChart.io
- */
-async function convertTableToImage(table, format, width, height, style, config) {
-  // Build QuickChart table configuration
-  const chartConfig = buildTableChart(table, width, height, style);
-  
-  // Build QuickChart URL
-  const params = new URLSearchParams({
-    c: JSON.stringify(chartConfig),
-    format: format,
-    width: width.toString(),
-    height: height.toString(),
-  });
-  
-  // Add API key if available
-  if (config.QUICKCHART_API_KEY) {
-    params.append('key', config.QUICKCHART_API_KEY);
-  }
-  
-  const quickchartUrl = `${config.QUICKCHART_BASE_URL}?${params.toString()}`;
-  
-  // For production: You might want to actually fetch and validate the image
-  // const response = await fetch(quickchartUrl);
-  // if (!response.ok) throw new Error('QuickChart API error');
-  
-  return quickchartUrl;
-}
-
-/**
- * Build QuickChart table configuration
- */
-function buildTableChart(table, width, height, style) {
-  // Create a table visualization using Chart.js table plugin or custom rendering
-  // For simplicity, we'll create a bar chart showing the data
-  // In production, you'd use a proper table rendering library
-  
-  const datasets = [];
-  const labels = table.rows.map((row, i) => `Row ${i + 1}`);
-  
-  // Convert table data to chart format
-  table.headers.forEach((header, colIndex) => {
-    datasets.push({
-      label: header,
-      data: table.rows.map(row => parseFloat(row[colIndex]) || 0)
-    });
-  });
-  
-  return {
+function buildQuickChartUrl(table, options, env) {
+  // Simple bar chart representation
+  const chartConfig = {
     type: 'bar',
     data: {
-      labels: labels,
-      datasets: datasets
+      labels: table.rows.map((_, i) => `Row ${i + 1}`),
+      datasets: table.headers.map((header, colIndex) => ({
+        label: header,
+        data: table.rows.map(row => parseFloat(row[colIndex]) || 0)
+      }))
     },
     options: {
       title: {
         display: true,
-        text: 'Table Data Visualization'
+        text: 'Table Data'
       },
-      responsive: true,
-      maintainAspectRatio: false,
       plugins: {
         datalabels: {
-          display: true,
           anchor: 'end',
           align: 'top'
         }
       }
     }
   };
+
+  const params = new URLSearchParams({
+    c: JSON.stringify(chartConfig),
+    format: options.format || 'png',
+    width: options.width || '800',
+    height: options.height || '600'
+  });
+
+  // Add API key if available (optional)
+  if (env.QUICKCHART_API_KEY) {
+    params.append('key', env.QUICKCHART_API_KEY);
+  }
+
+  return `${QUICKCHART_URL}?${params.toString()}`;
 }
 
-/**
- * Export functions for testing
- */
-export {
-  validateTableData,
-  normalizeTableData,
-  buildTableChart,
-  applyEnvConfig
-};
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+export { normalizeTable, buildQuickChartUrl };
