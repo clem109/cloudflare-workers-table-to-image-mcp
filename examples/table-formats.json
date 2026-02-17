@@ -1,0 +1,155 @@
+{
+  "description": "Examples of supported table data formats",
+  "formats": {
+    "format1_headers_rows": {
+      "name": "Headers + Rows Format",
+      "description": "Table with explicit headers and rows arrays",
+      "example": {
+        "headers": ["Product", "Q1 Sales", "Q2 Sales", "Growth"],
+        "rows": [
+          ["Widget A", "$50,000", "$65,000", "+30%"],
+          ["Widget B", "$75,000", "$82,000", "+9%"],
+          ["Widget C", "$30,000", "$45,000", "+50%"]
+        ]
+      },
+      "useCases": [
+        "Database query results",
+        "Spreadsheet exports",
+        "Structured reports"
+      ]
+    },
+    "format2_array_of_objects": {
+      "name": "Array of Objects Format",
+      "description": "Array where each element is an object with key-value pairs",
+      "example": [
+        {
+          "name": "Alice Johnson",
+          "department": "Engineering",
+          "salary": "$120,000",
+          "years": 5
+        },
+        {
+          "name": "Bob Smith",
+          "department": "Marketing",
+          "salary": "$95,000",
+          "years": 3
+        },
+        {
+          "name": "Carol White",
+          "department": "Sales",
+          "salary": "$110,000",
+          "years": 7
+        }
+      ],
+      "useCases": [
+        "JSON API responses",
+        "MongoDB query results",
+        "JavaScript data structures"
+      ]
+    },
+    "format3_2d_array": {
+      "name": "2D Array Format",
+      "description": "Simple 2D array where first row is headers",
+      "example": [
+        ["Country", "Population", "GDP", "Area"],
+        ["USA", "331M", "$23T", "9.8M km²"],
+        ["China", "1.4B", "$17T", "9.6M km²"],
+        ["India", "1.4B", "$3.5T", "3.3M km²"],
+        ["Japan", "125M", "$5T", "377K km²"]
+      ],
+      "useCases": [
+        "CSV file data",
+        "Excel exports",
+        "Simple data tables"
+      ]
+    }
+  },
+  "advanced_examples": {
+    "financial_report": {
+      "headers": ["Category", "Budget", "Actual", "Variance", "Status"],
+      "rows": [
+        ["Revenue", "$1,000,000", "$1,150,000", "+15%", "✓"],
+        ["COGS", "$400,000", "$420,000", "+5%", "⚠"],
+        ["OpEx", "$300,000", "$280,000", "-7%", "✓"],
+        ["Net Income", "$300,000", "$450,000", "+50%", "✓"]
+      ]
+    },
+    "project_status": [
+      {
+        "project": "Website Redesign",
+        "owner": "Design Team",
+        "status": "In Progress",
+        "completion": "75%",
+        "deadline": "2026-03-01"
+      },
+      {
+        "project": "Mobile App v2",
+        "owner": "Dev Team",
+        "status": "Testing",
+        "completion": "90%",
+        "deadline": "2026-02-15"
+      },
+      {
+        "project": "API Integration",
+        "owner": "Backend Team",
+        "status": "Planning",
+        "completion": "25%",
+        "deadline": "2026-04-01"
+      }
+    ],
+    "performance_metrics": [
+      ["Metric", "Current", "Target", "Trend"],
+      ["Response Time", "120ms", "100ms", "↓"],
+      ["Uptime", "99.9%", "99.99%", "→"],
+      ["Error Rate", "0.1%", "0.05%", "↓"],
+      ["Throughput", "5000 req/s", "10000 req/s", "↑"]
+    ],
+    "comparison_table": {
+      "headers": ["Feature", "Free", "Pro", "Enterprise"],
+      "rows": [
+        ["Storage", "10 GB", "100 GB", "Unlimited"],
+        ["Users", "1", "10", "Unlimited"],
+        ["API Calls", "1000/day", "100K/day", "Unlimited"],
+        ["Support", "Community", "Email", "24/7 Phone"],
+        ["Price", "$0", "$49/mo", "Custom"]
+      ]
+    }
+  },
+  "style_options": {
+    "default": "Standard table with borders and padding",
+    "minimal": "Clean, borderless design",
+    "dark": "Dark background with light text",
+    "light": "Light background with dark text",
+    "striped": "Alternating row colors",
+    "compact": "Dense layout with minimal spacing"
+  },
+  "output_formats": {
+    "png": "Best for general use, good quality",
+    "jpg": "Smaller file size, good for photos",
+    "svg": "Vector format, scalable without quality loss"
+  },
+  "conversion_examples": [
+    {
+      "description": "Simple 3-column table",
+      "input": {
+        "headers": ["Name", "Age", "City"],
+        "rows": [["Alice", "30", "NYC"], ["Bob", "25", "LA"]]
+      },
+      "options": {
+        "format": "png",
+        "width": 600,
+        "height": 400
+      }
+    },
+    {
+      "description": "Large dataset",
+      "input": "Array of 100+ objects",
+      "options": {
+        "format": "png",
+        "width": 1200,
+        "height": 800,
+        "style": "compact"
+      }
+    }
+  ]
+}
