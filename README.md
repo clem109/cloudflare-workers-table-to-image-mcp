@@ -4,6 +4,12 @@
 
 Convert table data to beautiful images using QuickChart.io API, deployed on Cloudflare Workers. This project serves as an MCP (Model Context Protocol) connector for Poke and other AI assistants.
 
+## ✨ TRUE Zero-Configuration Deployment
+
+**Click the deploy button above for instant deployment - NO environment variables required!**
+
+The worker uses QuickChart.io's free tier by default (no API key needed). All configuration variables have sensible defaults built-in. You can optionally add a QuickChart API key later to increase rate limits.
+
 ## 🚀 Features
 
 - **Table to Image Conversion**: Convert JSON table data to PNG/JPG images
@@ -13,58 +19,39 @@ Convert table data to beautiful images using QuickChart.io API, deployed on Clou
 - **MCP Connector**: Ready-to-use MCP server implementation
 - **TypeScript Support**: Fully typed for better DX
 - **Zero Cold Starts**: Instant responses worldwide
-- **API Key Management**: Secure environment variable handling
-
-## 📋 Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [Cloudflare Account](https://dash.cloudflare.com/sign-up)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
-- [QuickChart.io API Key](https://quickchart.io/pricing/) (optional, free tier available)
+- **Zero Configuration**: Works out-of-the-box with no setup required
 
 ## 🎯 Quick Start
 
-### 1. Clone and Install
+### Option 1: One-Click Deploy (Recommended - ZERO CONFIG)
+
+1. **Click the "Deploy to Cloudflare Workers" button above**
+2. **Authenticate with your Cloudflare account**
+3. **Click "Deploy" - that's it!**
+
+No environment variables, no secrets, no configuration needed. The worker will be live immediately using QuickChart's free tier.
+
+### Option 2: CLI Deploy
 
 ```bash
+# Clone the repository
 git clone https://github.com/clem109/cloudflare-workers-table-to-image-mcp.git
 cd cloudflare-workers-table-to-image-mcp
+
+# Install dependencies
 npm install
-```
 
-### 2. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your credentials:
-
-```env
-QUICKCHART_API_KEY=your_quickchart_api_key_here
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-```
-
-### 3. Deploy
-
-#### Option A: One-Click Deploy
-Click the deploy button at the top of this README.
-
-#### Option B: CLI Deploy
-```bash
 # Authenticate with Cloudflare
-wrangler login
+npx wrangler login
 
-# Deploy to production
+# Deploy (no configuration needed)
 npm run deploy
-
-# Or use the deploy script
-chmod +x deploy.sh
-./deploy.sh
 ```
 
-#### Option C: Development Mode
+### Option 3: Development Mode
+
 ```bash
+npm install
 npm run dev
 ```
 
@@ -86,8 +73,7 @@ Convert table data to image.
   },
   "format": "png",
   "width": 800,
-  "height": 600,
-  "style": "default"
+  "height": 600
 }
 ```
 
@@ -160,32 +146,46 @@ MCP-compatible endpoint for AI assistants.
 ]
 ```
 
-See [examples/table-formats.json](./examples/table-formats.json) for more examples.
+## 🔧 Configuration (Optional)
 
-## 🔧 Configuration
+### Zero-Config Defaults
 
-### wrangler.toml
-Customize your worker configuration in `wrangler.toml`:
+The worker comes with sensible defaults - **no configuration needed**:
 
-```toml
-name = "table-to-image-mcp"
-compatibility_date = "2024-01-01"
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAX_TABLE_SIZE` | 10000 | Max cells in table |
+| `DEFAULT_IMAGE_FORMAT` | png | Default output format |
+| `DEFAULT_IMAGE_WIDTH` | 800 | Default image width |
+| `DEFAULT_IMAGE_HEIGHT` | 600 | Default image height |
+| `RATE_LIMIT` | 60 | Requests per minute |
+| `ENABLE_CORS` | true | Enable CORS |
 
-[vars]
-MAX_TABLE_SIZE = "10000"
-DEFAULT_IMAGE_FORMAT = "png"
+### Optional Enhancements
+
+**To increase QuickChart rate limits** (optional):
+
+1. Get a free API key from [QuickChart.io](https://quickchart.io/pricing/)
+2. Set it as a secret:
+   ```bash
+   echo "your-api-key" | npx wrangler secret put QUICKCHART_API_KEY
+   ```
+
+**To add MCP authentication** (optional):
+
+```bash
+echo "your-mcp-key" | npx wrangler secret put MCP_API_KEY
 ```
 
-### Environment Variables
+### Custom Configuration
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|----------|
-| `QUICKCHART_API_KEY` | QuickChart.io API key | No* | - |
-| `MAX_TABLE_SIZE` | Max cells in table | No | 10000 |
-| `DEFAULT_IMAGE_FORMAT` | Default output format | No | png |
-| `RATE_LIMIT` | Requests per minute | No | 60 |
+To customize defaults, edit `wrangler.toml`:
 
-*Free tier available without API key (rate limited)
+```toml
+[vars]
+MAX_TABLE_SIZE = "20000"
+DEFAULT_IMAGE_FORMAT = "jpg"
+```
 
 ## 🔌 MCP Integration
 
@@ -193,24 +193,24 @@ This project implements the Model Context Protocol for seamless AI assistant int
 
 ### Configure with Poke
 
-1. Add to your MCP config:
+1. Deploy your worker using the one-click button
+2. Copy your worker URL (e.g., `https://table-to-image-mcp.your-subdomain.workers.dev`)
+3. Add to your MCP config:
+
 ```json
 {
   "mcpServers": {
     "table-to-image": {
-      "url": "https://your-worker.workers.dev/mcp",
-      "apiKey": "your_api_key"
+      "url": "https://your-worker-url.workers.dev/mcp"
     }
   }
 }
 ```
 
-2. Use in conversations:
+4. Use in conversations:
 ```
 Convert this table to an image: [table data]
 ```
-
-See [src/mcp-server.js](./src/mcp-server.js) for implementation details.
 
 ## 📚 Usage Examples
 
@@ -222,8 +222,8 @@ curl -X POST https://your-worker.workers.dev/convert \
     "table": {
       "headers": ["Product", "Sales", "Growth"],
       "rows": [
-        ["Widget A", "$1000", "+15%"],
-        ["Widget B", "$2000", "+25%"]
+        ["Widget A", "1000", "+15%"],
+        ["Widget B", "2000", "+25%"]
       ]
     }
   }'
@@ -266,8 +266,6 @@ result = response.json()
 print(f"Image URL: {result['imageUrl']}")
 ```
 
-More examples in [examples/usage.md](./examples/usage.md).
-
 ## 🏗️ Project Structure
 
 ```
@@ -275,14 +273,15 @@ cloudflare-workers-table-to-image-mcp/
 ├── src/
 │   ├── index.js           # Main Worker entry point
 │   └── mcp-server.js      # MCP connector implementation
+├── .cloudflare/
+│   └── deploy.json        # Zero-config deploy settings
 ├── examples/
 │   ├── table-formats.json # Example table formats
 │   └── usage.md          # Usage examples
-├── wrangler.toml         # Cloudflare Workers config
+├── wrangler.toml         # Main Cloudflare config
+├── wrangler.json         # Deploy button config
 ├── package.json          # Dependencies
-├── .env.example          # Environment template
 ├── deploy.sh             # Deployment script
-├── LICENSE               # MIT License
 └── README.md             # This file
 ```
 
@@ -292,6 +291,8 @@ cloudflare-workers-table-to-image-mcp/
 ```bash
 npm run dev
 ```
+
+Visit `http://localhost:8787` to test locally.
 
 ### Run Tests
 ```bash
@@ -303,22 +304,32 @@ npm test
 npm run lint
 ```
 
-## 🚀 Deployment
+## 🚀 Deployment Options
 
-### Production Deploy
+### 1. One-Click (Zero Config)
+Click the deploy button at the top - done!
+
+### 2. CLI Deploy
 ```bash
 npm run deploy
 ```
 
-### Environment-specific Deploy
+### 3. Environment-specific Deploy
 ```bash
-wrangler deploy --env production
-wrangler deploy --env staging
+npm run deploy:production
+npm run deploy:staging
+```
+
+### 4. Custom Script
+```bash
+chmod +x deploy.sh
+./deploy.sh
 ```
 
 ## 🛡️ Security
 
-- API keys stored as encrypted environment variables
+- No sensitive data required for deployment
+- API keys are optional and stored as encrypted secrets
 - Rate limiting enabled by default
 - Input validation and sanitization
 - CORS configured for secure access
@@ -329,10 +340,34 @@ wrangler deploy --env staging
 - **Throughput**: 1000+ requests/second
 - **Uptime**: 99.99% SLA
 - **Cold Start**: 0ms (no cold starts)
+- **Free Tier**: QuickChart free tier included
+
+## ❓ FAQ
+
+### Do I need a QuickChart API key?
+**No!** The worker uses QuickChart's free tier by default. An API key is optional and only needed if you exceed free tier limits.
+
+### Do I need to set environment variables?
+**No!** Everything has sensible defaults. The one-click deploy requires zero configuration.
+
+### Why is the deploy button asking for variables?
+If this happens, it's likely a caching issue. The latest version requires no variables. Try:
+1. Clear browser cache
+2. Use the direct link: `https://deploy.workers.cloudflare.com/?url=https://github.com/clem109/cloudflare-workers-table-to-image-mcp`
+3. Deploy via CLI: `npm run deploy`
+
+### Can I customize the configuration?
+Yes! After deployment, you can modify `wrangler.toml` and redeploy, or set optional secrets for enhanced features.
+
+### How do I get my worker URL?
+After deployment:
+- Check your Cloudflare dashboard
+- Or look at the deployment output
+- Format: `https://table-to-image-mcp.your-subdomain.workers.dev`
 
 ## 🤝 Contributing
 
-Contributions welcome! Please read our contributing guidelines:
+Contributions welcome! Please:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -346,7 +381,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- [QuickChart.io](https://quickchart.io/) - Chart generation API
+- [QuickChart.io](https://quickchart.io/) - Chart generation API (free tier included)
 - [Cloudflare Workers](https://workers.cloudflare.com/) - Edge computing platform
 - [Model Context Protocol](https://modelcontextprotocol.io/) - AI integration standard
 
@@ -354,7 +389,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - **Issues**: [GitHub Issues](https://github.com/clem109/cloudflare-workers-table-to-image-mcp/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/clem109/cloudflare-workers-table-to-image-mcp/discussions)
-- **Email**: support@example.com
 
 ## 🗺️ Roadmap
 
@@ -370,5 +404,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Built with ❤️ by Clement Venard**
+
+**⭐ Star this repo if you find it useful!**
 
 Made possible by Cloudflare Workers and QuickChart.io
